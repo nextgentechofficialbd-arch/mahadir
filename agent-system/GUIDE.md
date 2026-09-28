@@ -5,6 +5,34 @@ below. Total time from nothing to your first run: **about 3 minutes**.
 
 ---
 
+## WINDOWS 10/11 QUICK START (start here if you're on Windows)
+
+On Windows the command is `python`, **never** `python3`, and you don't need Git.
+
+1. **Install Python** — go to https://www.python.org/downloads/ , click the big
+   yellow **Download Python** button, run the installer, and **tick the box
+   "Add python.exe to PATH"** at the bottom of the first screen. Install, then
+   close ALL Command Prompt windows.
+2. **Download the project ZIP** — paste this in your browser:
+   `https://github.com/nextgentechofficialbd-arch/mahadir/archive/refs/heads/arena/01a0e893-mahadir.zip`
+   Right-click the downloaded ZIP → **Extract All** → extract to `C:\Users\rahma\`.
+   You get a folder like `C:\Users\rahma\mahadir-arena-01a0e893-mahadir\`.
+3. **Open a NEW Command Prompt** and type:
+   ```bat
+   cd C:\Users\rahma\mahadir-arena-01a0e893-mahadir\agent-system
+   python --version
+   python run.py
+   ```
+4. **Dashboard**: `python dashboard.py` → open http://localhost:8000 in the browser.
+5. If `python --version` still says "Python was not found": Windows Settings →
+   Apps → Advanced app settings → **App execution aliases** → turn OFF both
+   `python.exe` and `python3.exe`, open a fresh Command Prompt, try again.
+
+Paste commands as plain text — if a URL pastes as `[text](url)` markdown,
+cmd cannot read it; type browser URLs in the browser's address bar instead.
+
+---
+
 ## STEP 1 — Install Python (skip if you have it)
 
 Check: open a terminal (Windows: PowerShell; Mac/Linux: Terminal) and type:
