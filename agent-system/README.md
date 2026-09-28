@@ -7,6 +7,9 @@ learned into persistent memory** so the next run is measurably better.
 Runs fully offline with a deterministic mock brain (no API key), or point it at
 OpenAI / Anthropic / any OpenAI-compatible endpoint with one env var.
 
+> **New here? Follow [`GUIDE.md`](GUIDE.md) — a step-by-step A-to-Z walkthrough
+> (install → first run → dashboard → real LLM → resume → troubleshooting).**
+
 ```bash
 python3 run.py                     # demo task, end to end, ~1s
 python3 run.py "your task here" --chaos   # same, with injected faults -> watch retries

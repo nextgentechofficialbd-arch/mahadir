@@ -33,8 +33,9 @@ def overview():
                               "draft_rounds", "brain", "task", "forced_accept",
                               "verification_failed")})
                 runs[-1]["task_title"] = rep.get("task", {}).get("title", "")[:90]
-                runs[-1]["ts"] = rid
-    runs.sort(key=lambda r: r.get("ts", ""), reverse=True)
+                # newest first, by directory modification time
+                runs[-1]["ts"] = os.path.getmtime(os.path.join(RUNS, rid))
+    runs.sort(key=lambda r: r.get("ts", 0), reverse=True)
     mem = jload(os.path.join(MEM, "policies.json"), {})
     lessons = jload(os.path.join(MEM, "lessons.json"), [])
     cards = jload(os.path.join(MEM, "scorecards.json"), {})
