@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mahadir MAS — Control Room</title>
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#111721; --panel2:#0e141d; --line:#1d2836;
+    --tx:#d7e2ee; --dim:#7c8ba1; --acc:#4cc2ff;
+    --planner:#c678dd; --researcher:#61afef; --writer:#56b6c2;
+    --critic:#e5c07b; --verifier:#98c379; --postmortem:#e06c75; --orch:#5c6b80;
+    --ok:#98c379; --bad:#e06c75; --warn:#e5c07b;
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  body{background:var(--bg); color:var(--tx); font:14px/1.45 "SF Mono",ui-monospace,Menlo,Consolas,monospace}
+  header{display:flex; align-items:baseline; gap:14px; padding:14px 20px; border-bottom:1px solid var(--line); background:var(--panel2)}
+  header h1{font-size:15px; letter-spacing:1px}
+  header .sub{color:var(--dim); font-size:12px}
+  header .live{margin-left:auto; font-size:11px; color:var(--ok)}
+  .wrap{display:grid; grid-template-columns:280px 1fr 340px; min-height:calc(100vh - 47px)}
+  .col{border-right:1px solid var(--line); overflow-y:auto; max-height:calc(100vh - 47px)}
+  .col:last-child{border-right:none}
+  h2{font-size:11px; letter-spacing:1.5px; color:var(--dim); text-transform:uppercase; padding:12px 14px 6px}
+  .run{padding:9px 14px; border-bottom:1px solid var(--line); cursor:pointer}
+  .run:hover{background:var(--panel)} .run.sel{background:var(--panel); border-left:3px solid var(--acc)}
+  .run .id{font-size:12px} .run .t{color:var(--dim); font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .pill{display:inline-block; font-size:10px; padding:1px 7px; border-radius:8px; margin-left:6px}
+  .DONE{background:#1d2b1d; color:var(--ok)} .FAILED{background:#2d1a1d; color:var(--bad)}
+  .DONE_WITH_WARNINGS{background:#2d281a; color:var(--warn)}
+  .RUNNING{background:#12222d; color:var(--acc)}
+  section{padding:10px 16px 18px}
+  /* pipeline strip */
+  .pipe{display:flex; gap:6px; flex-wrap:wrap; margin:6px 0 2px}
+  .stage{font-size:11px; padding:4px 10px; border:1px solid var(--line); border-radius:4px; color:var(--dim); background:var(--panel2)}
+  .stage.on{border-color:var(--acc); color:var(--acc); box-shadow:0 0 8px #4cc2ff22}
+  .stage.done{color:var(--ok); border-color:#2b3a2b}
+  .stage.bad{color:var(--bad); border-color:#3a2226}
+  .stats{display:flex; gap:22px; margin:12px 0; flex-wrap:wrap}
+  .stat .n{font-size:22px; font-weight:700} .stat .l{font-size:10px; color:var(--dim); text-transform:uppercase; letter-spacing:1px}
+  /* timeline */
+  .msg{display:grid; grid-template-columns:64px 110px 26px 1fr; gap:8px; padding:5px 6px; border-bottom:1px dashed #16202c; font-size:12px; align-items:baseline}
+  .msg:hover{background:var(--panel2)}
+  .msg .ts{color:var(--dim); font-size:10px}
+  .from{font-weight:700} .planner{color:var(--planner)} .researcher{color:var(--researcher)} .writer{color:var(--writer)} .critic{color:var(--critic)} .verifier{color:var(--verifier)} .postmortem{color:var(--postmortem)} .orchestrator{color:var(--orch)}
+  .msg .ty{color:var(--dim)} .msg .pl{color:var(--tx); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .msg.event .ty{color:var(--acc)}
+  .badge{font-size:10px; padding:0 6px; border-radius:3px; margin-left:6px}
+  .badge.PASS{background:#1d2b1d; color:var(--ok)} .badge.FAIL{background:#2d1a1d; color:var(--bad)}
+  /* agent cards */
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:10px 12px; margin-bottom:10px}
+  .card h3{font-size:13px; margin-bottom:6px}
+  .kv{display:flex; justify-content:space-between; font-size:11.5px; color:var(--dim); padding:1.5px 0}
+  .kv b{color:var(--tx); font-weight:600}
+  .bar{height:5px; background:#1a2330; border-radius:3px; margin-top:6px; overflow:hidden}
+  .bar i{display:block; height:100%; background:var(--acc)}
+  .lesson{background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--postmortem); border-radius:4px; padding:8px 10px; margin-bottom:8px; font-size:12px}
+  .lesson .id{color:var(--postmortem); font-size:11px}
+  .lesson .g{color:var(--tx); margin:3px 0}
+  .lesson .m{color:var(--dim); font-size:11px}
+  .empty{color:var(--dim); font-size:12px; padding:8px 2px}
+  a{color:var(--acc); text-decoration:none}
+</style>
+</head>
+<body>
+<header>
+  <h1>MAHADIR <span style="color:var(--acc)">MAS</span></h1>
+  <span class="sub">multi-agent control room — planner → researcher → writer → critic → verifier → postmortem</span>
+  <span class="live" id="live">● live</span>
+</header>
+<div class="wrap">
+  <div class="col" id="runs-col"><h2>Runs</h2><div id="runs"></div></div>
+  <div class="col" id="main-col">
+    <section>
+      <h2>Pipeline</h2>
+      <div class="pipe" id="pipe"></div>
+      <div class="stats" id="stats"></div>
+      <div style="font-size:11px;color:var(--dim)" id="runmeta"></div>
+    </section>
+    <section><h2>Message trace (every handoff)</h2><div id="trace"><div class="empty">select a run</div></div></section>
+  </div>
+  <div class="col">
+    <section><h2>Agent scorecards (memory)</h2><div id="cards"></div></section>
+    <section><h2>Lessons learned (persist across runs)</h2><div id="lessons"></div></section>
+    <section><h2>Policies (self-tuned, bounded)</h2><div id="policies"></div></section>
+    <section><h2>Run quality trend</h2><div id="trend"></div></section>
+  </div>
+</div>
+<script>
+const AGENTS=["planner","researcher","writer","critic","verifier","postmortem"];
+const STAGES=["PLANNING","RESEARCHING","PRODUCING","REVIEWING","VERIFYING","POSTMORTEM","DONE"];
+let sel=null, data={runs:[]}, detail=null, timer=null;
+
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+async function j(url){const r=await fetch(url);return r.json()}
+
+function renderRuns(){
+  $("runs").innerHTML=data.runs.map(r=>`
+    <div class="run ${r.run_id===sel?'sel':''}" onclick="pick('${r.run_id}')">
+      <div class="id">${esc(r.run_id)}<span class="pill ${esc(r.status)}">${esc(r.status)}</span></div>
+      <div class="t">${esc(r.task_title||r.task?.title||"")}</div>
+      <div class="t">q=${r.quality??"—"} · ${r.wall_s??"—"}s · ${r.messages??0} msgs · r${r.draft_rounds??0}</div>
+    </div>`).join("")||'<div class="empty">no runs yet — run <b>python run.py</b></div>';
+}
+
+function renderPipe(){
+  const rep=detail?.report; const el=$("pipe");
+  if(!rep){el.innerHTML='<div class="empty">—</div>';return}
+  const states=rep.states_visited||[];
+  const idx=STAGES.indexOf(states[states.length-1]||"");
+  const failed=rep.status==="FAILED";
+  el.innerHTML=STAGES.map((s,i)=>{
+    let cls="stage";
+    if(failed && i===idx)cls+=" bad";
+    else if(i<idx||rep.status==="DONE"&&i===STAGES.length-1)cls+=" done";
+    else if(i===idx)cls+=" on";
+    return `<span class="${cls}">${s}</span>`;
+  }).join('<span style="color:var(--dim)">→</span>');
+  const st=rep.stats||{};
+  $("stats").innerHTML=[["quality",rep.quality??"—"],["wall",rep.wall_s+"s"],
+    ["messages",rep.messages],["draft rounds",rep.draft_rounds],
+    ["incidents",(rep.incidents||[]).length],["retries",st.retries??0]]
+    .map(([l,n])=>`<div class="stat"><div class="n">${esc(n)}</div><div class="l">${l}</div></div>`).join("");
+  const flags=[];
+  if(rep.forced_accept)flags.push("⚠ critic force-accept (round cap) — postmortem raises cap");
+  if(rep.verification_failed)flags.push("⚠ verifier FAILED — artifact saved as UNVERIFIED");
+  if(rep.dead_letters?.length)flags.push("☠ dead-letters: "+esc(JSON.stringify(rep.dead_letters)).slice(0,120));
+  $("runmeta").innerHTML=`task: ${esc(rep.task?.title||"")}<br>brain: ${esc(rep.brain)} ${flags.length?"<br>"+flags.join("<br>"):""}`;
+}
+
+function pl(msg){
+  const p=msg.payload||{};
+  switch(msg.type){
+    case "plan":return "plan: "+(p.plan?.subtasks||[]).map(s=>s.stage).join(" → ")+(p.plan?.seeded_from_playbook?" · seeded "+p.plan.seeded_from_playbook:"");
+    case "evidence":return `evidence pack: ${p.evidence?.facts?.length||0} facts, confidence floor ${p.evidence?.confidence_floor}`;
+    case "draft":return `draft r${p.draft?.revision_of_round}: ${p.draft?.draft_markdown?.length||0} chars, cites ${(p.draft?.citations||[]).join(",")}${(p.draft?.applied_lessons||[]).length?" · applied lessons "+p.draft.applied_lessons.join(","):""}`;
+    case "verdict":{const v=p.verdict||{};return `<span class="badge ${v.verdict}">${v.verdict}</span> score ${v.score} · ${(v.issues||[]).length} issue(s) ${(v.issues||[]).map(i=>i.area).join(",")}`;}
+    case "verification":{const v=p.verification||{};return `<span class="badge ${v.verdict}">${v.verdict}</span> claims ${v.checked_claims} · risk ${v.hallucination_risk}`;}
+    case "postmortem_report":{const a=p.postmortem?.applied||{};return `lessons +${(a.lessons_added||[]).length} ${(a.lessons_added||[]).join(",")} · playbook ${a.playbook_id||"—"} · policies ${Object.keys(a.policies_now||{}).length}`;}
+    default:
+      if(msg.type?.startsWith("event.")){const k=msg.type.slice(6);
+        return `<b>${esc(k)}</b> ${esc(Object.entries(p).filter(([_,v])=>v!==null&&typeof v!=="object").map(([k2,v])=>k2+"="+v).join("  ")).slice(0,150)}`;}
+      return esc(JSON.stringify(p).slice(0,120));
+  }
+}
+
+function renderTrace(){
+  const tr=detail?.trace||[];
+  $("trace").innerHTML=tr.map(m=>`<div class="msg ${m.type?.startsWith("event")?"event":""}">
+    <span class="ts">${esc((m.ts||"").slice(11,19)||m.ts)}</span>
+    <span class="from ${esc(m.from)}">${esc(m.from)}</span>
+    <span class="ty">${esc(m.type)}${m.round?` r${m.round}`:""}</span>
+    <span class="pl">${pl(m)}</span></div>`).join("")||'<div class="empty">—</div>';
+}
+
+function renderCards(){
+  const sc=data.scorecards||{};
+  $("cards").innerHTML=AGENTS.filter(a=>sc[a]).map(a=>{const c=sc[a];
+    const y=c.first_pass_yields||[];const pct=y.length?Math.round(100*y.reduce((x,z)=>x+z,0)/y.length):0;
+    return `<div class="card"><h3 style="color:var(--${a})">${a}</h3>
+      <div class="kv"><span>runs</span><b>${c.runs}</b></div>
+      <div class="kv"><span>first-pass yield</span><b>${pct}%</b></div>
+      <div class="kv"><span>avg latency</span><b>${c.avg_latency_ms}ms</b></div>
+      <div class="bar"><i style="width:${pct}%;background:var(--${a})"></i></div></div>`;}).join("")||'<div class="empty">no data yet</div>';
+  $("lessons").innerHTML=(data.lessons||[]).map(l=>`<div class="lesson">
+    <div class="id">${esc(l.id)} → ${esc(l.target)} · seen ×${l.times_seen||1}</div>
+    <div class="g">${esc(l.condition)}: ${esc(l.guidance)}</div>
+    <div class="m">${esc(l.evidence||"")}</div></div>`).join("")||'<div class="empty">no lessons yet — the postmortem writes them after each run</div>';
+  $("policies").innerHTML=Object.entries(data.policies||{}).map(([k,v])=>
+    `<div class="kv"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join("");
+  const qh=data.quality_history||[];
+  $("trend").innerHTML=qh.length?qh.map(q=>{const h=Math.max(6,Math.round(q.score*10));
+    return `<div style="display:inline-block;width:18px;margin-right:3px;text-align:center">
+      <div style="height:${h*2.2}px;background:${q.score>=8?"var(--ok)":q.score>=5?"var(--warn)":"var(--bad)"};width:100%;border-radius:2px 2px 0 0;margin-top:${22-h*2.2>0?22-h*2.2:0}px"></div>
+      <div style="font-size:9px;color:var(--dim)">${q.score??"—"}</div></div>`;}).join("")
+    :'<div class="empty">—</div>';
+}
+
+async function pick(id){sel=id;detail=await j("/api/run/"+id);renderPipe();renderTrace();renderRuns()}
+
+async function tick(){
+  data=await j("/api/overview");
+  renderRuns();renderCards();
+  if(!sel&&data.runs.length)pick(data.runs[0].run_id);
+  else if(sel&&data.runs.find(r=>r.run_id===sel)){detail=await j("/api/run/"+sel);renderPipe();renderTrace()}
+}
+tick();timer=setInterval(tick,2000);
+</script>
+</body>
+</html>
